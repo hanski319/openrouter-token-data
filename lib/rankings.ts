@@ -2,12 +2,22 @@ export interface ModelRow {
   model: string
   tokens: number
   date: string
+  /** Fraction of that week's total OpenRouter tokens. */
+  share: number
 }
 
 export interface MonthRow {
   month: string
   weekEnding: string
   source: string
+  /** Tokens across every model in the capture — the share denominator. */
+  weekTotal: number
+  /** How many models the capture contained; null when the source is the chart. */
+  modelsCounted: number | null
+  /** Source could not fill all 15 ranks. */
+  partial?: boolean
+  /** The week runs past month end (used when nothing lands inside the month). */
+  straddles?: boolean
   models: ModelRow[]
 }
 
@@ -76,7 +86,12 @@ export function fmtTokens(v: number): string {
 export interface ProviderSummary {
   provider: string
   totalTokens: number
+  /** Share of the top-15 tokens in this table. */
   share: number
+  /** Mean share of total OpenRouter volume across the months it appears in. */
+  avgVolumeShare: number
+  /** Its best single-month share of total OpenRouter volume. */
+  peakVolumeShare: number
   appearances: number
   models: number
   bestRank: number
@@ -90,7 +105,8 @@ export interface ProviderSummary {
  * how deep that month's capture went.
  */
 export function summarizeProviders(data: RankingsData): ProviderSummary[] {
-  const acc = new Map<string, ProviderSummary & { modelSet: Set<string> }>()
+  type Acc = ProviderSummary & { modelSet: Set<string>; monthShares: Map<string, number> }
+  const acc = new Map<string, Acc>()
 
   for (const m of data.months) {
     m.models.forEach((row, i) => {
@@ -98,9 +114,10 @@ export function summarizeProviders(data: RankingsData): ProviderSummary[] {
       let e = acc.get(provider)
       if (!e) {
         e = {
-          provider, totalTokens: 0, share: 0, appearances: 0, models: 0,
-          bestRank: Infinity, firstMonth: m.month, lastMonth: m.month,
-          modelSet: new Set<string>(),
+          provider, totalTokens: 0, share: 0, avgVolumeShare: 0, peakVolumeShare: 0,
+          appearances: 0, models: 0, bestRank: Infinity,
+          firstMonth: m.month, lastMonth: m.month,
+          modelSet: new Set<string>(), monthShares: new Map<string, number>(),
         }
         acc.set(provider, e)
       }
@@ -108,6 +125,8 @@ export function summarizeProviders(data: RankingsData): ProviderSummary[] {
       e.appearances += 1
       e.bestRank = Math.min(e.bestRank, i + 1)
       e.modelSet.add(row.model)
+      // A provider can hold several slots in one month; its share for that month is the sum.
+      e.monthShares.set(m.month, (e.monthShares.get(m.month) ?? 0) + (row.share ?? 0))
       if (m.month < e.firstMonth) e.firstMonth = m.month
       if (m.month > e.lastMonth) e.lastMonth = m.month
     })
@@ -115,6 +134,15 @@ export function summarizeProviders(data: RankingsData): ProviderSummary[] {
 
   const grand = [...acc.values()].reduce((s, e) => s + e.totalTokens, 0) || 1
   return [...acc.values()]
-    .map(({ modelSet, ...e }) => ({ ...e, models: modelSet.size, share: e.totalTokens / grand }))
+    .map(({ modelSet, monthShares, ...e }) => {
+      const shares = [...monthShares.values()]
+      return {
+        ...e,
+        models: modelSet.size,
+        share: e.totalTokens / grand,
+        avgVolumeShare: shares.length ? shares.reduce((s, v) => s + v, 0) / shares.length : 0,
+        peakVolumeShare: shares.length ? Math.max(...shares) : 0,
+      }
+    })
     .sort((a, b) => b.totalTokens - a.totalTokens)
 }

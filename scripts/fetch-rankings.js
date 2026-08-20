@@ -3,12 +3,15 @@
  * Build data/rankings-monthly.json: the last full week of each month, top 15 models.
  *
  * Sources, in the order they are preferred:
- *   1. Live  — https://openrouter.ai/api/frontend/v1/rankings/models?view=week
- *              Returns one record per model aggregated over the trailing 7 days.
- *              Only ever describes *now*, so it covers the current month only.
- *   2. Wayback — archived https://openrouter.ai/rankings pages. Each page embeds the
- *              same weekly leaderboard in its RSC payload, so an archived page is a
- *              weekly snapshot as of its capture date.
+ *   1. Live API — https://openrouter.ai/api/frontend/v1/rankings/models?view=week
+ *              One record per model aggregated over the trailing 7 days. Only ever
+ *              describes *now*, so it covers the current month only.
+ *   2. Wayback — archived rankings pages and archived captures of the same JSON
+ *              endpoint. Both carry the full leaderboard, so both fill all 15 ranks.
+ *   3. Top Models chart — data/chart-weeks.json, covering the trailing ~52 weeks.
+ *              Used only where the archive comes up empty, because the chart names
+ *              just the top ~9 models per week plus an "Others" bucket and so cannot
+ *              fill 15 ranks. Refresh it with scripts/capture-chart.js.
  *
  * Token data only exists on the rankings page from ~Feb 2025 onward; earlier captures
  * carry a request-count chart with no per-model token totals. START_MONTH reflects that.
@@ -19,7 +22,7 @@
 const fs = require('fs')
 const path = require('path')
 
-const START_MONTH = '2025-02'
+const START_MONTH = '2025-01'
 const TOP_N = 15
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36'
 const CACHE = path.join(__dirname, '..', '.cache', 'snapshots')
@@ -202,8 +205,12 @@ async function listSnapshots() {
 
 /* ------------------------------------------------------------------- main */
 
-async function resolveMonth(month, snapshots) {
+async function resolveMonth(month, snapshots, overhangDays = 0) {
   const monthEnd = lastDayOf(month)
+  // Normally the week must end inside the month. `overhangDays` is a fallback for
+  // months where no capture qualifies: Jan 2025 has no leaderboard until the 5 Feb
+  // capture, whose week runs 29 Jan - 4 Feb.
+  const latestEnd = addDays(monthEnd, overhangDays)
   // A capture taken shortly after the month ends still describes the final full
   // week of that month, so allow a few days of overhang.
   const candidates = snapshots
@@ -229,14 +236,65 @@ async function resolveMonth(month, snapshots) {
       continue
     }
     const windowEnd = models.reduce((mx, r) => (r.date > mx ? r.date : mx), '')
-    // The week must have ended inside the month we are reporting on.
-    if (!windowEnd || windowEnd > monthEnd || windowEnd < addDays(monthEnd, -13)) {
+    if (!windowEnd || windowEnd > latestEnd || windowEnd < addDays(monthEnd, -13)) {
       console.log(`    ${kind}:${ts}: window ends ${windowEnd || '?'}, outside ${month}`)
       continue
     }
-    return { month, weekEnding: windowEnd, source: `wayback-${kind}:${ts}`, models: models.slice(0, TOP_N) }
+    return withShares({
+      month,
+      weekEnding: windowEnd,
+      source: `wayback-${kind}:${ts}`,
+      ...(windowEnd > monthEnd ? { straddles: true } : {}),
+    }, models)
   }
   return null
+}
+
+/**
+ * The Top Models chart on the live site holds the trailing ~52 weeks, so it can cover
+ * gaps under a year old. It names only the top ~9 models per week plus an "Others"
+ * bucket, which is why it sits behind the archive rather than in front of it: the
+ * archive fills all 15 ranks and this cannot. Refresh with scripts/capture-chart.js.
+ */
+function fromChart(month) {
+  const file = path.join(__dirname, '..', 'data', 'chart-weeks.json')
+  if (!fs.existsSync(file)) return null
+  const chart = JSON.parse(fs.readFileSync(file, 'utf8'))
+  const monthEnd = lastDayOf(month)
+
+  // Latest week that finished inside the month.
+  const week = (chart.weeks || [])
+    .filter((w) => w.weekEnding <= monthEnd && w.weekEnding >= addDays(monthEnd, -13))
+    .sort((a, b) => b.weekEnding.localeCompare(a.weekEnding))[0]
+  if (!week) return null
+
+  console.log(`    -> week ending ${week.weekEnding} via ${chart.source} ` +
+    `(${week.models.length} of ${TOP_N} ranks available)`)
+  return {
+    month,
+    weekEnding: week.weekEnding,
+    source: chart.source,
+    partial: week.models.length < TOP_N,
+    weekTotal: week.total,
+    modelsCounted: null,
+    models: week.models.slice(0, TOP_N).map((r) => ({
+      ...r, date: week.weekEnding, share: week.total ? r.tokens / week.total : 0,
+    })),
+  }
+}
+
+/**
+ * Volume share is measured against every model in the capture, not just the top N,
+ * so the denominator is total OpenRouter throughput for that week.
+ */
+function withShares(meta, models) {
+  const weekTotal = models.reduce((s, r) => s + r.tokens, 0)
+  return {
+    ...meta,
+    weekTotal,
+    modelsCounted: models.length,
+    models: models.slice(0, TOP_N).map((r) => ({ ...r, share: weekTotal ? r.tokens / weekTotal : 0 })),
+  }
 }
 
 async function liveWeek(month) {
@@ -244,7 +302,7 @@ async function liveWeek(month) {
   const models = aggregate(extractRecords(JSON.stringify(data)))
   if (models.length < TOP_N) return null
   const weekEnding = models.reduce((mx, r) => (r.date > mx ? r.date : mx), '')
-  return { month, weekEnding, source: 'live:api?view=week', models: models.slice(0, TOP_N) }
+  return withShares({ month, weekEnding, source: 'live:api?view=week' }, models)
 }
 
 async function main() {
@@ -275,7 +333,13 @@ async function main() {
     if (!row) {
       console.log('')
       row = await resolveMonth(month, snapshots)
-      if (row) console.log(`    -> week ending ${row.weekEnding} via ${row.source}`)
+      // Retry allowing a week that runs a few days past month end.
+      if (!row) row = await resolveMonth(month, snapshots, 5)
+      if (!row) row = fromChart(month)
+      if (row) {
+        console.log(`    -> week ending ${row.weekEnding} via ${row.source}` +
+          (row.straddles ? ' (straddles into the next month)' : ''))
+      }
     }
 
     if (row) results.push(row)

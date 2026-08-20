@@ -40,9 +40,22 @@ export default function MonthMatrix({ data }: { data: RankingsData }) {
                 #
               </th>
               {months.map((m) => (
-                <th key={m.month} className="text-left px-3 py-2 font-medium min-w-[220px] border-r border-[#1a1a1a] last:border-0">
-                  <div className="text-[#e5e5e5]">{monthLabel(m.month)}</div>
+                <th key={m.month} className="text-left px-3 py-2 font-medium min-w-[230px] border-r border-[#1a1a1a] last:border-0">
+                  <div className="text-[#e5e5e5]">
+                    {monthLabel(m.month)}
+                    {(m.partial || m.straddles) && (
+                      <span
+                        className="ml-1 text-[#7a6a3a]"
+                        title={m.partial
+                          ? 'From the Top Models chart, which lists only the top 9 plus an Others bucket'
+                          : 'Week runs past month end — no capture landed inside the month'}
+                      >
+                        *
+                      </span>
+                    )}
+                  </div>
                   <div className="text-[10px] text-[#555] font-normal mt-0.5">wk ending {m.weekEnding}</div>
+                  <div className="text-[10px] text-[#444] font-normal">{fmtTokens(m.weekTotal)} total</div>
                 </th>
               ))}
             </tr>
@@ -61,6 +74,7 @@ export default function MonthMatrix({ data }: { data: RankingsData }) {
                       <div className={`font-mono text-xs ${colorFor(row.model)}`}>{shortModel(row.model)}</div>
                       <div className="text-[10px] text-[#555] mt-0.5">
                         {providerOf(row.model)} · {fmtTokens(row.tokens)}
+                        <span className="text-[#777]"> · {(row.share * 100).toFixed(1)}%</span>
                       </div>
                     </td>
                   )

@@ -39,8 +39,17 @@ export default function Home() {
       <footer className="text-xs text-[#444] border-t border-[#1a1a1a] pt-4 space-y-1">
         {data.missing && data.missing.length > 0 && (
           <p className="text-[#7a6a3a]">
-            No archived data for {data.missing.map(monthLabel).join(', ')} — the rankings page
-            was client-rendered then, so those captures contain no leaderboard.
+            No data for {data.missing.map(monthLabel).join(', ')}.
+          </p>
+        )}
+        {data.months.some((m) => m.partial || m.straddles) && (
+          <p className="text-[#7a6a3a]">
+            {data.months.filter((m) => m.partial).map((m) => monthLabel(m.month)).join(', ')}
+            {data.months.some((m) => m.partial) &&
+              ' comes from the Top Models chart, which lists only the top 9 plus an Others bucket. '}
+            {data.months.filter((m) => m.straddles).map((m) => monthLabel(m.month)).join(', ')}
+            {data.months.some((m) => m.straddles) &&
+              ' uses the first week the leaderboard existed, which runs a few days past month end.'}
           </p>
         )}
         <p>

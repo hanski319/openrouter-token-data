@@ -9,25 +9,47 @@ OpenRouter's rankings page serves a *weekly* leaderboard: one row per model, hol
 prompt + completion tokens aggregated over the trailing seven days. `scripts/fetch-rankings.js`
 reads that leaderboard from two places:
 
-| Source | Used for | Notes |
-| --- | --- | --- |
-| `openrouter.ai/api/frontend/v1/rankings/models?view=week` | the current month | Live. Always describes *now*, so it can only ever supply the newest week. |
-| Wayback Machine captures of `openrouter.ai/rankings` | every earlier month | Each capture embeds the weekly leaderboard as of its capture date. |
+| Order | Source | Used for | Depth |
+| --- | --- | --- | --- |
+| 1 | `api/frontend/v1/rankings/models?view=week` | the current month | full leaderboard |
+| 2 | Wayback captures — rankings pages, and archived captures of that same endpoint | every earlier month | full leaderboard |
+| 3 | `data/chart-weeks.json`, read from the site's Top Models chart | gaps under a year old | top ~9 + Others |
 
 For each month the script picks the capture whose weekly window **ends inside that month**,
 as late as possible — i.e. the last full week closest to month end.
 
-### Coverage starts February 2025
+The chart sits last rather than second because it names only the top ~9 models per week;
+the archive fills all 15 ranks, so it is preferred wherever it has anything to offer.
+The chart is what rescues months the archive cannot serve at all.
 
-Captures before roughly February 2025 contain no token data at all. The rankings page then
-published only a request-count chart (eight models plus an "Others" bucket), and the
-per-model token leaderboard did not yet exist in the page payload. December 2024 and
-January 2025 therefore cannot be reconstructed from the archive.
+### Refreshing the chart source
+
+The chart's data arrives through a Next.js server action that rejects non-browser callers,
+so it cannot be fetched from a script. Open
+[the chart](https://openrouter.ai/rankings#top-models), let it render, paste
+`scripts/capture-chart.js` into the console, and drop the downloaded `chart-weeks.json`
+into `data/`. It carries the trailing ~52 weeks, so it covers any gap under a year old —
+which is exactly the window where Wayback tends to be thinnest.
+
+### Known soft spots
+
+- **January 2025** — the token leaderboard did not exist in the page payload before
+  February 2025 (the page published only a request-count chart). The earliest capture
+  carrying tokens is 5 Feb 2025, whose week runs 29 Jan – 4 Feb, so January is reported
+  from that straddling week and flagged in the UI.
+- **May 2026** — the page was briefly client-rendered, leaving empty shells in the
+  archive, and the JSON endpoint was not archived until 19 June 2026. This month comes
+  from the Top Models chart, so only 9 of 15 ranks exist. Also flagged.
 
 ### Counting rules
 
 - Tokens are `total_prompt_tokens + total_completion_tokens`.
 - Model variants (`standard`, `:free`, `:thinking`, …) are merged into one row per model.
+- **Volume share** divides a model's tokens by the tokens of *every* model in that
+  week's capture (200–530 of them), so it is share of total OpenRouter throughput
+  rather than share of the top 15. Cross-checked against the site's own chart: for the
+  week of 10 Aug 2026 it reports DeepSeek V4 Flash at 11.2T against a 75.3T total, and
+  the same model reads 11.23T here.
 - The provider summary aggregates each month's top-15 rows only, so every month
   contributes the same number of rows regardless of how deep that month's capture went.
 
@@ -42,12 +64,13 @@ Writes `data/rankings-monthly.json`.
 
 ## Workbook layout
 
-`Download XLSX` produces four sheets:
+`Download XLSX` produces three sheets:
 
-1. **Top 15 by Month** — months across the columns, ranks 1–15 down the rows, model names in the cells.
-2. **Tokens by Month** — the same grid with token counts.
-3. **Provider Summary** — aggregate ranking by provider across the whole period.
-4. **Raw Data** — one row per (month, rank) for pivoting.
+1. **Top 15 by Month** — months across the columns, three columns each
+   (Model | Tokens | % Share), ranks 1–15 down the rows, closing with the week's
+   total tokens and what the top 15 add up to.
+2. **Provider Summary** — aggregate ranking by provider, with average and peak volume share.
+3. **Raw Data** — one row per (month, rank) for pivoting.
 
 ## Development
 

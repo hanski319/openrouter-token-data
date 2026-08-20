@@ -1,0 +1,24 @@
+{
+  "_comment": "Weeks read from the Top Models chart on openrouter.ai/rankings, which holds the trailing ~52 weeks. Refresh with scripts/capture-chart.js (see README). The chart names only the top ~9 models per week plus an aggregated Others bucket, so weeks sourced from here cannot fill all 15 ranks. 'total' is the chart's own weekly total (named models + Others) and matches its tooltip.",
+  "capturedAt": "2026-08-20",
+  "source": "live:top-models-chart",
+  "weeks": [
+    {
+      "weekStart": "2026-05-25",
+      "weekEnding": "2026-05-31",
+      "total": 31807747787522,
+      "others": 14761417436395,
+      "models": [
+        { "model": "deepseek/deepseek-v4-flash-20260423", "tokens": 3108137494077 },
+        { "model": "tencent/hy3-preview-20260421", "tokens": 3026675656298 },
+        { "model": "anthropic/claude-4.7-opus-20260416", "tokens": 2323905161870 },
+        { "model": "anthropic/claude-4.6-sonnet-20260217", "tokens": 1923927592793 },
+        { "model": "openrouter/owl-alpha", "tokens": 1663154558448 },
+        { "model": "xiaomi/mimo-v2.5-20260422", "tokens": 1462547058328 },
+        { "model": "deepseek/deepseek-v4-pro-20260423", "tokens": 1253518790688 },
+        { "model": "xiaomi/mimo-v2.5-pro-20260422", "tokens": 1243780903758 },
+        { "model": "deepseek/deepseek-v3.2-20251201", "tokens": 1040683134867 }
+      ]
+    }
+  ]
+}

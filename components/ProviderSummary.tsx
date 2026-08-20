@@ -22,7 +22,8 @@ export default function ProviderSummary({ data }: { data: RankingsData }) {
               <th className="text-left px-4 py-3 text-[#555] font-medium w-10">#</th>
               <th className="text-left px-4 py-3 text-[#555] font-medium">Provider</th>
               <th className="text-right px-4 py-3 text-[#555] font-medium">Total Tokens</th>
-              <th className="text-right px-4 py-3 text-[#555] font-medium">Share</th>
+              <th className="text-right px-4 py-3 text-[#555] font-medium">Avg Vol Share</th>
+              <th className="text-right px-4 py-3 text-[#555] font-medium">Peak</th>
               <th className="text-right px-4 py-3 text-[#555] font-medium">Top-15 Slots</th>
               <th className="text-right px-4 py-3 text-[#555] font-medium">Models</th>
               <th className="text-right px-4 py-3 text-[#555] font-medium">Best</th>
@@ -35,7 +36,8 @@ export default function ProviderSummary({ data }: { data: RankingsData }) {
                 <td className="px-4 py-2.5 text-[#555] font-mono text-xs">{i + 1}</td>
                 <td className="px-4 py-2.5 text-[#e5e5e5]">{p.provider}</td>
                 <td className="px-4 py-2.5 text-right font-mono text-[#e5e5e5]">{fmtTokens(p.totalTokens)}</td>
-                <td className="px-4 py-2.5 text-right font-mono text-[#888]">{(p.share * 100).toFixed(1)}%</td>
+                <td className="px-4 py-2.5 text-right font-mono text-[#888]">{(p.avgVolumeShare * 100).toFixed(1)}%</td>
+                <td className="px-4 py-2.5 text-right font-mono text-[#666]">{(p.peakVolumeShare * 100).toFixed(1)}%</td>
                 <td className="px-4 py-2.5 text-right font-mono text-[#888]">{p.appearances}</td>
                 <td className="px-4 py-2.5 text-right font-mono text-[#888]">{p.models}</td>
                 <td className="px-4 py-2.5 text-right font-mono text-[#888]">#{p.bestRank}</td>
@@ -52,6 +54,7 @@ export default function ProviderSummary({ data }: { data: RankingsData }) {
 
       <p className="text-xs text-[#444] mt-3">
         Totals sum each month&apos;s top-{data.topN} rows only, so every month contributes equally.
+        Volume share is measured against all models routed that week, not just the top {data.topN}.
       </p>
     </section>
   )

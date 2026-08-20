@@ -29,52 +29,70 @@ export default function DownloadXlsxButton({ data }: { data: RankingsData }) {
       const months = data.months
       const ranks = Array.from({ length: data.topN }, (_, i) => i + 1)
 
-      /* ---------- Sheet 1: models, months going across ---------- */
-      const s1 = wb.addWorksheet('Top 15 by Month', { views: [{ state: 'frozen', xSplit: 1, ySplit: 2 }] })
-      s1.addRow(['', ...months.map((m) => monthLabel(m.month))])
-      s1.addRow(['Rank', ...months.map((m) => `week ending ${m.weekEnding}`)])
+      /* ---------- Sheet 1: months going across, 3 columns each ---------- */
+      const s1 = wb.addWorksheet('Top 15 by Month', { views: [{ state: 'frozen', xSplit: 1, ySplit: 3 }] })
+
+      // Row 1: month name spanning its three columns. Row 2: the week it covers.
+      // Row 3: the per-month column labels.
+      const head1: (string | null)[] = ['']
+      const head2: (string | null)[] = ['']
+      const head3: string[] = ['Rank']
+      for (const m of months) {
+        head1.push(monthLabel(m.month), null, null)
+        head2.push(`week ending ${m.weekEnding}`, null, null)
+        head3.push('Model', 'Tokens', '% Share')
+      }
+      s1.addRow(head1)
+      s1.addRow(head2)
+      s1.addRow(head3)
+      months.forEach((_, i) => {
+        const c = 2 + i * 3
+        s1.mergeCells(1, c, 1, c + 2)
+        s1.mergeCells(2, c, 2, c + 2)
+      })
       styleHeader(s1.getRow(1))
       const sub = s1.getRow(2)
       sub.font = { italic: true, size: 9, color: { argb: 'FFFFFFFF' } }
       sub.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEADER_FILL } }
       sub.alignment = { horizontal: 'center' }
+      styleHeader(s1.getRow(3))
+      s1.getRow(3).height = 18
 
       for (const r of ranks) {
-        s1.addRow([r, ...months.map((m) => {
-          const row = m.models[r - 1]
-          return row ? shortModel(row.model) : ''
-        })])
+        const row: (string | number | null)[] = [r]
+        for (const m of months) {
+          const e = m.models[r - 1]
+          row.push(e ? shortModel(e.model) : '', e ? e.tokens : null, e ? e.share : null)
+        }
+        s1.addRow(row)
       }
-      s1.getColumn(1).width = 6
-      months.forEach((_, i) => { s1.getColumn(i + 2).width = 30 })
-
-      /* ---------- Sheet 2: the same grid, token values ---------- */
-      const s2 = wb.addWorksheet('Tokens by Month', { views: [{ state: 'frozen', xSplit: 1, ySplit: 2 }] })
-      s2.addRow(['', ...months.map((m) => monthLabel(m.month))])
-      s2.addRow(['Rank', ...months.map((m) => `week ending ${m.weekEnding}`)])
-      styleHeader(s2.getRow(1))
-      const sub2 = s2.getRow(2)
-      sub2.font = { italic: true, size: 9, color: { argb: 'FFFFFFFF' } }
-      sub2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEADER_FILL } }
-      sub2.alignment = { horizontal: 'center' }
-
-      for (const r of ranks) {
-        s2.addRow([r, ...months.map((m) => m.models[r - 1]?.tokens ?? null)])
+      // Closing row: what the top 15 add up to against the week's whole volume.
+      const totalRow: (string | number | null)[] = ['Total']
+      for (const m of months) {
+        totalRow.push('', m.weekTotal, m.models.reduce((s, e) => s + (e.share ?? 0), 0))
       }
-      s2.getColumn(1).width = 6
+      s1.addRow(totalRow)
+      s1.getRow(s1.rowCount).font = { bold: true }
+
+      s1.getColumn(1).width = 7
       months.forEach((_, i) => {
-        const col = s2.getColumn(i + 2)
-        col.width = 18
-        col.numFmt = '#,##0'
+        const c = 2 + i * 3
+        s1.getColumn(c).width = 30
+        s1.getColumn(c + 1).width = 17
+        s1.getColumn(c + 1).numFmt = '#,##0'
+        s1.getColumn(c + 2).width = 10
+        s1.getColumn(c + 2).numFmt = '0.0%'
       })
 
-      /* ---------- Sheet 3: provider aggregates ---------- */
+      /* ---------- Sheet 2: provider aggregates ---------- */
       const s3 = wb.addWorksheet('Provider Summary', { views: [{ state: 'frozen', ySplit: 1 }] })
       s3.columns = [
         { header: 'Rank', key: 'rank', width: 7 },
         { header: 'Provider', key: 'provider', width: 18 },
         { header: 'Total Tokens', key: 'total', width: 20 },
         { header: 'Share of Top 15', key: 'share', width: 16 },
+        { header: 'Avg Volume Share', key: 'avgShare', width: 18 },
+        { header: 'Peak Volume Share', key: 'peakShare', width: 18 },
         { header: 'Top-15 Slots', key: 'slots', width: 14 },
         { header: 'Distinct Models', key: 'models', width: 16 },
         { header: 'Best Rank', key: 'best', width: 11 },
@@ -88,6 +106,8 @@ export default function DownloadXlsxButton({ data }: { data: RankingsData }) {
           provider: p.provider,
           total: p.totalTokens,
           share: p.share,
+          avgShare: p.avgVolumeShare,
+          peakShare: p.peakVolumeShare,
           slots: p.appearances,
           models: p.models,
           best: p.bestRank,
@@ -96,9 +116,9 @@ export default function DownloadXlsxButton({ data }: { data: RankingsData }) {
         })
       })
       s3.getColumn('total').numFmt = '#,##0'
-      s3.getColumn('share').numFmt = '0.0%'
+      for (const k of ['share', 'avgShare', 'peakShare']) s3.getColumn(k).numFmt = '0.0%'
 
-      /* ---------- Sheet 4: flat data, for pivoting ---------- */
+      /* ---------- Sheet 3: flat data, for pivoting ---------- */
       const s4 = wb.addWorksheet('Raw Data')
       s4.columns = [
         { header: 'Month', key: 'month', width: 12 },
@@ -107,6 +127,8 @@ export default function DownloadXlsxButton({ data }: { data: RankingsData }) {
         { header: 'Provider', key: 'provider', width: 18 },
         { header: 'Model', key: 'model', width: 46 },
         { header: 'Tokens', key: 'tokens', width: 20 },
+        { header: 'Volume Share', key: 'share', width: 14 },
+        { header: 'Week Total Tokens', key: 'weekTotal', width: 20 },
         { header: 'Source', key: 'source', width: 26 },
       ]
       styleHeader(s4.getRow(1))
@@ -119,13 +141,17 @@ export default function DownloadXlsxButton({ data }: { data: RankingsData }) {
             provider: providerOf(row.model),
             model: row.model,
             tokens: row.tokens,
+            share: row.share,
+            weekTotal: m.weekTotal,
             source: m.source,
           })
         })
       }
       s4.getColumn('tokens').numFmt = '#,##0'
+      s4.getColumn('weekTotal').numFmt = '#,##0'
+      s4.getColumn('share').numFmt = '0.00%'
 
-      for (const ws of [s1, s2, s3, s4]) {
+      for (const ws of [s1, s3, s4]) {
         ws.eachRow((row) => {
           row.eachCell((cell) => {
             cell.border = {
