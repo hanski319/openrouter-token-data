@@ -23,7 +23,7 @@ export default function DownloadXlsxButton({ data }: { data: RankingsData }) {
     setBusy(true)
     try {
       const wb = new Workbook()
-      wb.creator = 'token-usage-open-router'
+      wb.creator = 'openrouter-token-data'
       wb.created = new Date()
 
       const months = data.months
