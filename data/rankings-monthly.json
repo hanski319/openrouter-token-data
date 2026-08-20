@@ -1590,65 +1590,101 @@
     },
     {
       "month": "2026-05",
-      "weekEnding": "2026-05-31",
-      "source": "live:top-models-chart",
-      "partial": true,
-      "weekTotal": 31807747787522,
-      "modelsCounted": null,
+      "weekEnding": "2026-05-14",
+      "source": "wayback-page:20260515064432",
+      "earlyWeek": true,
+      "weekTotal": 26354887532277,
+      "modelsCounted": 385,
       "models": [
         {
-          "model": "deepseek/deepseek-v4-flash-20260423",
-          "tokens": 3108137494077,
-          "date": "2026-05-31",
-          "share": 0.09771636504538385
-        },
-        {
           "model": "tencent/hy3-preview-20260421",
-          "tokens": 3026675656298,
-          "date": "2026-05-31",
-          "share": 0.09515529601518495
+          "tokens": 2874210489611,
+          "date": "2026-05-14",
+          "share": 0.10905796832147115
         },
         {
           "model": "anthropic/claude-4.7-opus-20260416",
-          "tokens": 2323905161870,
-          "date": "2026-05-31",
-          "share": 0.07306097801686087
+          "tokens": 1561970498990,
+          "date": "2026-05-14",
+          "share": 0.059266824685821354
         },
         {
           "model": "anthropic/claude-4.6-sonnet-20260217",
-          "tokens": 1923927592793,
-          "date": "2026-05-31",
-          "share": 0.060486130789421874
+          "tokens": 1542538013456,
+          "date": "2026-05-14",
+          "share": 0.05852948571936965
         },
         {
-          "model": "openrouter/owl-alpha",
-          "tokens": 1663154558448,
-          "date": "2026-05-31",
-          "share": 0.05228771837471769
+          "model": "deepseek/deepseek-v4-flash-20260423",
+          "tokens": 1460674445138,
+          "date": "2026-05-14",
+          "share": 0.05542328508702997
         },
         {
-          "model": "xiaomi/mimo-v2.5-20260422",
-          "tokens": 1462547058328,
-          "date": "2026-05-31",
-          "share": 0.04598084303541129
+          "model": "moonshotai/kimi-k2.6-20260420",
+          "tokens": 1286989986788,
+          "date": "2026-05-14",
+          "share": 0.048833066929684865
         },
         {
-          "model": "deepseek/deepseek-v4-pro-20260423",
-          "tokens": 1253518790688,
-          "date": "2026-05-31",
-          "share": 0.03940922818747162
-        },
-        {
-          "model": "xiaomi/mimo-v2.5-pro-20260422",
-          "tokens": 1243780903758,
-          "date": "2026-05-31",
-          "share": 0.03910307991834393
+          "model": "google/gemini-3-flash-preview-20251217",
+          "tokens": 1123698627204,
+          "date": "2026-05-14",
+          "share": 0.042637200626555474
         },
         {
           "model": "deepseek/deepseek-v3.2-20251201",
-          "tokens": 1040683134867,
-          "date": "2026-05-31",
-          "share": 0.032717913315297796
+          "tokens": 970663488427,
+          "date": "2026-05-14",
+          "share": 0.03683049253153603
+        },
+        {
+          "model": "deepseek/deepseek-v4-pro-20260423",
+          "tokens": 880855699895,
+          "date": "2026-05-14",
+          "share": 0.0334228593772677
+        },
+        {
+          "model": "minimax/minimax-m2.7-20260318",
+          "tokens": 772411928812,
+          "date": "2026-05-14",
+          "share": 0.029308109467969544
+        },
+        {
+          "model": "nvidia/nemotron-3-super-120b-a12b-20230311",
+          "tokens": 625860214006,
+          "date": "2026-05-14",
+          "share": 0.023747405988339163
+        },
+        {
+          "model": "openrouter/owl-alpha",
+          "tokens": 621080470745,
+          "date": "2026-05-14",
+          "share": 0.02356604519690546
+        },
+        {
+          "model": "anthropic/claude-4.6-opus-20260205",
+          "tokens": 611851910062,
+          "date": "2026-05-14",
+          "share": 0.023215880140359583
+        },
+        {
+          "model": "stepfun/step-3.5-flash",
+          "tokens": 591661565740,
+          "date": "2026-05-14",
+          "share": 0.02244978526337433
+        },
+        {
+          "model": "google/gemini-2.5-flash-lite",
+          "tokens": 583811469392,
+          "date": "2026-05-14",
+          "share": 0.022151924142229874
+        },
+        {
+          "model": "google/gemini-2.5-flash",
+          "tokens": 568226600748,
+          "date": "2026-05-14",
+          "share": 0.021560577712657254
         }
       ]
     },

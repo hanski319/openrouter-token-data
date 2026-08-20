@@ -42,14 +42,18 @@ export default function Home() {
             No data for {data.missing.map(monthLabel).join(', ')}.
           </p>
         )}
-        {data.months.some((m) => m.partial || m.straddles) && (
+        {data.months.some((m) => m.partial || m.straddles || m.earlyWeek) && (
           <p className="text-[#7a6a3a]">
             {data.months.filter((m) => m.partial).map((m) => monthLabel(m.month)).join(', ')}
             {data.months.some((m) => m.partial) &&
               ' comes from the Top Models chart, which lists only the top 9 plus an Others bucket. '}
             {data.months.filter((m) => m.straddles).map((m) => monthLabel(m.month)).join(', ')}
             {data.months.some((m) => m.straddles) &&
-              ' uses the first week the leaderboard existed, which runs a few days past month end.'}
+              ' uses the first week the leaderboard existed, which runs a few days past month end. '}
+            {data.months.filter((m) => m.earlyWeek).map((m) => monthLabel(m.month)).join(', ')}
+            {data.months.some((m) => m.earlyWeek) &&
+              ' falls earlier in the month — the rankings page stopped server-rendering mid-month,' +
+              ' so the last usable capture is the newest one that still carried the leaderboard.'}
           </p>
         )}
         <p>

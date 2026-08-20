@@ -43,12 +43,16 @@ export default function MonthMatrix({ data }: { data: RankingsData }) {
                 <th key={m.month} className="text-left px-3 py-2 font-medium min-w-[230px] border-r border-[#1a1a1a] last:border-0">
                   <div className="text-[#e5e5e5]">
                     {monthLabel(m.month)}
-                    {(m.partial || m.straddles) && (
+                    {(m.partial || m.straddles || m.earlyWeek) && (
                       <span
                         className="ml-1 text-[#7a6a3a]"
-                        title={m.partial
-                          ? 'From the Top Models chart, which lists only the top 9 plus an Others bucket'
-                          : 'Week runs past month end — no capture landed inside the month'}
+                        title={
+                          m.partial
+                            ? 'From the Top Models chart, which lists only the top 9 plus an Others bucket'
+                            : m.straddles
+                              ? 'Week runs past month end — no capture landed inside the month'
+                              : 'Week sits earlier in the month — captures stop partway through'
+                        }
                       >
                         *
                       </span>

@@ -18,6 +18,8 @@ export interface MonthRow {
   partial?: boolean
   /** The week runs past month end (used when nothing lands inside the month). */
   straddles?: boolean
+  /** The week sits well before month end, because captures stop partway through. */
+  earlyWeek?: boolean
   models: ModelRow[]
 }
 

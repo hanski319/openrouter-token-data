@@ -205,25 +205,28 @@ async function listSnapshots() {
 
 /* ------------------------------------------------------------------- main */
 
-async function resolveMonth(month, snapshots, overhangDays = 0) {
+async function resolveMonth(month, snapshots, { overhangDays = 0, lookbackDays = 8, maxTries = 12 } = {}) {
   const monthEnd = lastDayOf(month)
-  // Normally the week must end inside the month. `overhangDays` is a fallback for
-  // months where no capture qualifies: Jan 2025 has no leaderboard until the 5 Feb
-  // capture, whose week runs 29 Jan - 4 Feb.
+  // Normally the week must end inside the month, and a capture taken shortly after
+  // month end still describes its final full week — hence the few days of overhang.
+  // `overhangDays` extends that for months where nothing lands inside at all (Jan 2025
+  // has no leaderboard until the 5 Feb capture, whose week runs 29 Jan - 4 Feb).
+  // `lookbackDays` widens the hunt for months where captures stop partway through:
+  // the page stopped server-rendering mid-May 2026, so May's newest usable capture
+  // sits on the 15th.
   const latestEnd = addDays(monthEnd, overhangDays)
-  // A capture taken shortly after the month ends still describes the final full
-  // week of that month, so allow a few days of overhang.
+  const earliestEnd = lookbackDays > 8 ? `${month}-01` : addDays(monthEnd, -13)
   const candidates = snapshots
     .filter(({ ts }) => {
       const d = tsToIso(ts)
-      return d >= addDays(monthEnd, -8) && d <= addDays(monthEnd, 5)
+      return d >= addDays(monthEnd, -lookbackDays) && d <= addDays(monthEnd, 5)
     })
     // The JSON endpoint is unambiguous, so exhaust those captures before falling back
     // to scraping pages; within each group take the newest window first.
     .sort((a, b) =>
       (a.kind === 'api' ? 0 : 1) - (b.kind === 'api' ? 0 : 1) || b.ts.localeCompare(a.ts))
 
-  for (const { ts, kind } of candidates.slice(0, 12)) {
+  for (const { ts, kind } of candidates.slice(0, maxTries)) {
     let models
     try {
       models = aggregate(extractRecords(await getSnapshot(ts, kind)))
@@ -236,7 +239,7 @@ async function resolveMonth(month, snapshots, overhangDays = 0) {
       continue
     }
     const windowEnd = models.reduce((mx, r) => (r.date > mx ? r.date : mx), '')
-    if (!windowEnd || windowEnd > latestEnd || windowEnd < addDays(monthEnd, -13)) {
+    if (!windowEnd || windowEnd > latestEnd || windowEnd < earliestEnd) {
       console.log(`    ${kind}:${ts}: window ends ${windowEnd || '?'}, outside ${month}`)
       continue
     }
@@ -245,6 +248,8 @@ async function resolveMonth(month, snapshots, overhangDays = 0) {
       weekEnding: windowEnd,
       source: `wayback-${kind}:${ts}`,
       ...(windowEnd > monthEnd ? { straddles: true } : {}),
+      // Flag weeks that sit well before month end so the table can say so.
+      ...(windowEnd < addDays(monthEnd, -10) ? { earlyWeek: true } : {}),
     }, models)
   }
   return null
@@ -334,7 +339,10 @@ async function main() {
       console.log('')
       row = await resolveMonth(month, snapshots)
       // Retry allowing a week that runs a few days past month end.
-      if (!row) row = await resolveMonth(month, snapshots, 5)
+      if (!row) row = await resolveMonth(month, snapshots, { overhangDays: 5 })
+      // Then reach further back for any week that still ended inside the month —
+      // a full leaderboard from earlier in the month beats a partial one at its end.
+      if (!row) row = await resolveMonth(month, snapshots, { lookbackDays: 26, maxTries: 30 })
       if (!row) row = fromChart(month)
       if (row) {
         console.log(`    -> week ending ${row.weekEnding} via ${row.source}` +

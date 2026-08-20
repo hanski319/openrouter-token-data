@@ -37,9 +37,12 @@ which is exactly the window where Wayback tends to be thinnest.
   February 2025 (the page published only a request-count chart). The earliest capture
   carrying tokens is 5 Feb 2025, whose week runs 29 Jan – 4 Feb, so January is reported
   from that straddling week and flagged in the UI.
-- **May 2026** — the page was briefly client-rendered, leaving empty shells in the
-  archive, and the JSON endpoint was not archived until 19 June 2026. This month comes
-  from the Top Models chart, so only 9 of 15 ranks exist. Also flagged.
+- **May 2026** — the page stopped server-rendering between 15 and 17 May 2026, and the
+  JSON endpoint was not archived until 19 June, so nothing covers the end of the month.
+  The 15 May capture is intact (385 models), so May is reported from the week ending
+  14 May: a full top 15, just earlier in the month than the other columns. Flagged in
+  the UI. The Top Models chart does cover the 25–31 May week, but names only 9 models,
+  which is why the archive is preferred here.
 
 ### Counting rules
 
