@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Token Usage — OpenRouter
 
-## Getting Started
+Top 15 models by token volume for **the last full week of each month**, rendered as a
+month-by-month matrix and downloadable as a multi-sheet XLSX workbook.
 
-First, run the development server:
+## Where the numbers come from
+
+OpenRouter's rankings page serves a *weekly* leaderboard: one row per model, holding
+prompt + completion tokens aggregated over the trailing seven days. `scripts/fetch-rankings.js`
+reads that leaderboard from two places:
+
+| Source | Used for | Notes |
+| --- | --- | --- |
+| `openrouter.ai/api/frontend/v1/rankings/models?view=week` | the current month | Live. Always describes *now*, so it can only ever supply the newest week. |
+| Wayback Machine captures of `openrouter.ai/rankings` | every earlier month | Each capture embeds the weekly leaderboard as of its capture date. |
+
+For each month the script picks the capture whose weekly window **ends inside that month**,
+as late as possible — i.e. the last full week closest to month end.
+
+### Coverage starts February 2025
+
+Captures before roughly February 2025 contain no token data at all. The rankings page then
+published only a request-count chart (eight models plus an "Others" bucket), and the
+per-model token leaderboard did not yet exist in the page payload. December 2024 and
+January 2025 therefore cannot be reconstructed from the archive.
+
+### Counting rules
+
+- Tokens are `total_prompt_tokens + total_completion_tokens`.
+- Model variants (`standard`, `:free`, `:thinking`, …) are merged into one row per model.
+- The provider summary aggregates each month's top-15 rows only, so every month
+  contributes the same number of rows regardless of how deep that month's capture went.
+
+## Regenerating the data
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+node scripts/fetch-rankings.js            # uses .cache/ for already-downloaded captures
+node scripts/fetch-rankings.js --refresh  # re-download everything
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Writes `data/rankings-monthly.json`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Workbook layout
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`Download XLSX` produces four sheets:
 
-## Learn More
+1. **Top 15 by Month** — months across the columns, ranks 1–15 down the rows, model names in the cells.
+2. **Tokens by Month** — the same grid with token counts.
+3. **Provider Summary** — aggregate ranking by provider across the whole period.
+4. **Raw Data** — one row per (month, rank) for pivoting.
 
-To learn more about Next.js, take a look at the following resources:
+## Development
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm install
+npm run dev
+```
